@@ -3,26 +3,29 @@ import matplotlib.pyplot as plt
 import os
 
 def izhikevich(a, b, c, d, current, u, condition, w=-1, tau=0.25, max_t=200, T1=-1, 
-               equalize=True, current_type="step", current_eq=None, beta=0, feature=None,
-               u1=0.04, u2=5, u3=140):
+               equalize=True, current_type="step", current_eq=None, beta=0,
+               u2=5, u3=140):
     """
-    Izhikevich model of spiking neurons.
+    Simulates the Izhikevich model of spiking neurons.
 
     Args:
-        a, b, c, d: parameters of the model.
-        current: input current
-        u: membrane potential initial value
-        condition: is a lambda function that takes t and T1 and decide I value
-        w: recovery variable initial value
-        tau: time step of the simulation
-        max_t: maximum time of the simulation
-        T1: time to apply the input current
-        equalize: if true the plot cuts all spikes to max of 30
-        current_type: if "step" the current is a step or pulse function, if "linear" the current is a linear increasing function
-        beta: default current value for linear increasing current
-        u1: first parameter of potential in Izhikevich model  (0.04)
-        u2: second parameter of potential in Izhikevich model (5)
-        u3: third parameter of potential in Izhikevich model  (140)
+        a, b, c, d (float): parameters of the Izhikevich model.
+        current (float): Input current.
+        u (float): Initial value of the membrane potential.
+        condition (function): Lambda function that takes t and T1 and decides the value of I.
+        w (float, optional): Initial value of the recovery variable. Defaults to -1 if w = b * u.
+        tau (float, optional): Time step of the simulation. Defaults to 0.25.
+        max_t (float, optional): Maximum time of the simulation. Defaults to 200.
+        T1 (float, optional): Time to apply the input current. Defaults to -1.
+        equalize (bool, optional): If True, the plot cuts all spikes to a maximum of 30. Defaults to True.
+        current_type (str, optional): Type of current ("step" for step function or "pulses", "linear" for linear increasing function). Defaults to "step".
+        current_eq (function, optional): Function defining the current if current_type is "linear". Defaults to None.
+        beta (float, optional): Default current value. Defaults to 0.
+        u2 (float, optional): Second parameter of potential in Izhikevich model. Defaults to 5.
+        u3 (float, optional): Third parameter of potential in Izhikevich model. Defaults to 140.
+
+    Returns:
+        tuple: Membrane potential, recovery variable, and time span arrays.
     """
     
     # variables initializations
@@ -40,12 +43,12 @@ def izhikevich(a, b, c, d, current, u, condition, w=-1, tau=0.25, max_t=200, T1=
             I = current if condition(t, T1) else beta  
         elif current_type == "linear":
             I = current_eq(t, T1) if t > T1 else beta
-        elif current_type == "thr_var":
-            I = input_current(t, feature)
+        else:
+            I = input_current(t, current_type)
 
         # leap-frog integration on Izhikevich model
-        u = u + tau * (u1 * (u ** 2) + u2 * u + u3 - w + I )
-        if feature != "(R)":
+        u = u + tau * (0.04 * (u ** 2) + u2 * u + u3 - w + I )
+        if current_type != "acc_(R)":
             w = w + tau * a * (b * u - w)
         else:
             w = w + tau * a * (b * (u + 65))
@@ -63,17 +66,30 @@ def izhikevich(a, b, c, d, current, u, condition, w=-1, tau=0.25, max_t=200, T1=
         
     return potential, recovery, tspan
 
+
 def input_current (t, feature):
-    if feature == "(O)":
+    """
+    Returns the value of the input current for the Izhikevich model in cases of (O) and (R) features.
+    
+    Args:
+        t (float): Time.
+        feature (str): Feature for input current variation.
+        
+    Returns:
+        float: Value of the input current.
+    """
+    if "(O)" in feature:
         I = 1 if (10 < t < 15) or (80 < t < 85) else (-6 if 70 < t < 75 else 0)
-    elif feature == "(R)":
+    elif "(R)" in feature:
         I = t / 25 if t < 200 else (0 if t < 300 or t >= 312.5 else (t - 300) / 12.5 * 4)
     return I
 
-    
 
 def plot_and_save(x, y, xlabel, ylabel, title, folder):
-    """Genera e salva un grafico con i dati forniti."""
+    """
+    Generates and saves a plot.
+    """
+    
     size = (7, 4)
     name = title.replace(" ", "_")
     filepath = f"plots/{folder}/{name}"
@@ -90,7 +106,10 @@ def plot_and_save(x, y, xlabel, ylabel, title, folder):
     plt.show()
 
 def plot_and_save_imgs(pot, rec, tspan, title):
-    """Genera e salva i grafici del potenziale di membrana e del ritratto di fase."""
+    """
+    Generates and saves the membrane potential and phase portrait plots.
+    """
+    
     plot_and_save(tspan, pot, "Time (t)", "Membrane Potential (u)", 
                   f"{title} - Membrane Potential Plot", "potential_plots")
 
