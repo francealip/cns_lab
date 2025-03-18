@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+# utility functions for lab 1 mandatory part
+
 def izhikevich(a, b, c, d, current, u, condition, w=-1, tau=0.25, max_t=200, T1=-1, 
                equalize=True, current_type="step", current_eq=None, beta=0,
                u2=5, u3=140):
@@ -115,3 +117,80 @@ def plot_and_save_imgs(pot, rec, tspan, title):
 
     plot_and_save(pot, rec, "Membrane Potential (u)", "Recovery variable (w)", 
                   f"{title} - Phase Portrait", "phase_portraits")
+    
+    
+
+# utility functions for lab 1 bonus track
+
+def izhikevich_bonus(a, b, c, d, current, u, condition, w=-1, tau=0.25, max_t=200, T1=-1, 
+                     beta=0, u2=5, u3=140):
+    """
+    Simulates the Izhikevich model of spiking neurons.
+
+    Args:
+        a, b, c, d (float): parameters of the Izhikevich model.
+        current (float): Input current.
+        u (float): Initial value of the membrane potential.
+        condition (function): Lambda function that takes t and T1 and decides the value of I.
+        w (float, optional): Initial value of the recovery variable. Defaults to -1 if w = b * u.
+        tau (float, optional): Time step of the simulation. Defaults to 0.25.
+        max_t (float, optional): Maximum time of the simulation. Defaults to 200.
+        T1 (float, optional): Time to apply the input current. Defaults to -1.
+        beta (float, optional): Default current value. Defaults to 0.
+        u2 (float, optional): Second parameter of potential in Izhikevich model. Defaults to 5.
+        u3 (float, optional): Third parameter of potential in Izhikevich model. Defaults to 140.
+
+    Returns:
+        tuple: Membrane potential, recovery variable, time span arrays and input current values.
+    """
+    
+    # variables initializations
+    w = b * u if w == -1 else w
+    tspan = np.arange(0, max_t+tau, tau) 
+    T1 = tspan[-1] / 10 if T1 == -1 else T1
+    
+    # potential and recovery variable values trough time 
+    potential = []
+    recovery = []
+    in_curr = []    # input current values in the simulation
+    in_plot = []    # input current values for plotting
+
+    for t in tspan: 
+        I = current if condition(t, T1) else beta  
+        in_curr.append(I)
+        if t % 10 in [0,1,2,3,4,5,6,7,8,9]:
+            in_plot.append(I)
+        
+        # leap-frog integration on Izhikevich model
+        u = u + tau * (0.04 * (u ** 2) + u2 * u + u3 - w + I )
+        w = w + tau * a * (b * u - w)
+
+        if u >= 30:
+            potential.append(30)
+            u = c 
+            w = w + d
+        else:
+            potential.append(u)
+        recovery.append(w)
+        
+    return potential, recovery, tspan, in_curr, in_plot
+
+def plot_extra(pot, rec, tspan, in_plot, offset, title):
+    size = (10, 4)  
+    fig, axes = plt.subplots(1, 2, figsize=size)  
+
+    # Membrane potential over time
+    axes[0].set_title(title + " - Membrane potential over time")
+    axes[0].set_xlabel("Time (ms)")
+    axes[0].set_ylabel("Membrane potential (u)")
+    axes[0].plot(tspan, pot, 'b', linewidth=0.5)
+    axes[0].plot([x - offset for x in in_plot], 'r', linewidth=0.5)
+
+    # Phase-plane plot 
+    axes[1].set_title(title + " - Phase-plane plot")
+    axes[1].set_xlabel("membrane potential (u)")
+    axes[1].set_ylabel("recovery variable (w)")
+    axes[1].plot(pot, rec)
+
+    plt.tight_layout()  
+    plt.show()
