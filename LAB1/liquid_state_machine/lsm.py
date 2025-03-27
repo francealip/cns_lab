@@ -132,7 +132,7 @@ class LSM:
         firings = []                        # spike timings
         states = []                         # here we construct the matrix of reservoir states
 
-        input = self.scaler.transform(input.reshape(-1, 1)).squeeze()
+        #input = self.scaler.transform(input.reshape(-1, 1)).squeeze()
         
         for t in range(len(input)):
             # we don't need random thalamic input:
@@ -152,7 +152,7 @@ class LSM:
         firings = np.concatenate(firings)
         
         if verbose:
-            plt.figure(figsize=[15,10])
+            plt.figure(figsize=[10,7])
             plt.title('Firings')
             plt.plot(firings[:, 0], firings[:, 1], '.')
         
@@ -182,7 +182,7 @@ class LSM:
         Liquid State Machine MLP redout training
         """
         self.states, self.firings = self.compute_liquid_state(x, verbose)
-        y = self.scaler.transform(y.reshape(-1, 1)).squeeze()
+        #y = self.scaler.transform(y.reshape(-1, 1)).squeeze()
         X = self.states
         y = torch.tensor(y, dtype=torch.float32)
         X = torch.tensor(X, dtype=torch.float32)
@@ -195,7 +195,7 @@ class LSM:
         Liquid State Machine linear redout training
         """
         self.states, self.firings = self.compute_liquid_state(x, verbose)
-        y = self.scaler.transform(y.reshape(-1, 1)).squeeze()
+        #y = self.scaler.transform(y.reshape(-1, 1)).squeeze()
         if lambda_reg != 0:
             I = np.eye(self.states.shape[1])   
             self.w_out = np.linalg.inv(self.states.T @ self.states + lambda_reg * I) @ self.states.T @ y
@@ -216,13 +216,13 @@ class LSM:
             states, _ = self.compute_liquid_state(x)
         
         if self.redout == 'linear':
-            y_pred = states @ self.w_out.T
-            y_pred = self.scaler.inverse_transform(y_pred.reshape(-1, 1)).squeeze()
+            y_pred = states @ self.w_out
+            #y_pred = self.scaler.inverse_transform(y_pred.reshape(-1, 1)).squeeze()
         else:
             X = torch.tensor(states, dtype=torch.float32)
             y_pred = self.mlp.predict(X)
             y_pred = y_pred.detach().numpy().squeeze()
-            y_pred = self.scaler.inverse_transform(y_pred.reshape(-1, 1)).squeeze()
+            #y_pred = self.scaler.inverse_transform(y_pred.reshape(-1, 1)).squeeze()
         
         return y_pred
     
