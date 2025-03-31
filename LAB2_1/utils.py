@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.utils import shuffle
 import matplotlib.pylab as plt
+import os
 
 def read_data(path = "data/solar_data.csv"):
     """
@@ -17,7 +18,7 @@ def read_data(path = "data/solar_data.csv"):
     
     return x
 
-def firing_rate_model(rule, u, n_epochs, lr, delta, alpha=0, seed=42):
+def firing_rate_model(rule, u, n_epochs, lr, delta, alpha=0, theta=0, seed=42):
     """
     Basic Hebbian Learning firing rate model.
     
@@ -48,11 +49,18 @@ def firing_rate_model(rule, u, n_epochs, lr, delta, alpha=0, seed=42):
             elif rule == "oja":
                 w = w + lr * ((v * x) - alpha * (v**2) * w)
             elif rule == "sub-norm":
-                n = np.ones(u.shape[0])
-                nu = u.shape[1]
+                nu = u.shape[0]
+                n = np.ones(nu)
+                w = w + lr * (v * x - (v* (n @ x) * n)/nu)
+            elif rule == "BCM":
+                w = w + lr * (v * x * (v - theta))
+                theta = theta + lr * 10 * (v**2 - theta)
+            elif rule == "cov":
+                C = np.cov(u)
+                #w = w + lr * (v * (u - theta))
+                w = w + lr * (C @ w)  
+            
                 
-                w = w + lr * ((v * x) - (((v*(n@x))*n)/nu))
-
         if np.linalg.norm(w - w_old) < delta:
             print(f"Convergence reach at epoch {epoch}")
             history.append(w.copy())
@@ -66,64 +74,80 @@ def firing_rate_model(rule, u, n_epochs, lr, delta, alpha=0, seed=42):
 
     return w, np.array(history), convergence
 
-def plot_1(u, w, p_evec):
+def plot_1(u, w, p_evec,rule):
     """
     plot number 1: plots input data u, weight vector w and principal eigenvector p_evec
         
     :param u: input data
     :param w: weight vector
     :param p_evec: principal eigenvector
+    :param rule: update rule used
     """
+    filepath = "outputs/"+rule+"/"
+    if not os.path.exists(filepath):
+        os.makedirs(filepath)
+    filepath += "plot_1.png"
     
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.plot(u[0], u[1], "o", markersize=3, label="Data points")
     plt.xlabel("u[0]")
     plt.ylabel("u[1]")
-    plt.title("lab2 dataset")
+    plt.title(rule.replace('_', ' ') + " weights and principal eigenvector plot")
     ax.quiver(0, 0, w[0], w[1], color="green", width=0.002, label="Weight vector (w)")
     ax.quiver(0, 0, p_evec[0], p_evec[1], color="red", width=0.002, label="Principal eigenvector")
     ax.legend()
+    
+    if os.path.isfile(filepath):
+        os.remove(filepath)
+    plt.savefig(filepath)
 
     plt.show()
     
-def plot_2_0(tspan, w_history):
+def plot_2(tspan, w_history, rule):
     """
-    plot number 2: plots the evolution of the weight vector through epochs component by component
+    plot number 2: plots the evolution of the weight vector w through epochs
     
-    :param w_history: history of the weight vector trough epochs
+    :param w_history: history of the weight vector through epochs
     :param tspan: time span
+    :param rule: update rule used
     """
-    fig, axs = plt.subplots(1, 2, figsize=(14, 5))
+    filepath = "outputs/"+rule+"/"
+    if not os.path.exists(filepath):
+        os.makedirs(filepath)
+    filepath += "plot_2.png"
+    
+    norm_hist = np.zeros(w_history.shape[0])
+    for i, w in enumerate(w_history):
+        norm_hist[i] = np.linalg.norm(w)
 
-    # First plot
+    fig, axs = plt.subplots(1, 3, figsize=(18, 5))
+    fig.suptitle(f"Evolution of Weight Vector - {rule.replace('_', ' ')}", fontsize=16) 
+
+    # First plot: w[0] over time
     axs[0].plot(tspan, w_history.T[0])
     axs[0].set_title("w[0] over time")
     axs[0].set_xlabel("Epochs")
     axs[0].set_ylabel("w[0]")
 
-    # Second plot
+    # Second plot: w[1] over time
     axs[1].plot(tspan, w_history.T[1])
     axs[1].set_title("w[1] over time")
     axs[1].set_xlabel("Epochs")
     axs[1].set_ylabel("w[1]")
 
+    # Third plot: Norm of w over time
+    axs[2].plot(tspan, norm_hist)
+    axs[2].set_title("Norm of W over time")
+    axs[2].set_xlabel("Epochs")
+    axs[2].set_ylabel("Norm of W")
+
+    plt.tight_layout(rect=[0, 0, 1, 0.95])  
+    
+    if os.path.isfile(filepath):
+        os.remove(filepath)
+    plt.savefig(filepath)
     plt.show()
 
-def plot_2_1(tspan, w_history, epochs):
-    """
-    plot number 2: plots the evolution of the weight vector through epochs
-    
-    :param w_history: history of the weight vector trough epochs
-    :param tspan: time span
-    :param epochs: number of epochs
-    """
-    
-    norm_hist = np.zeros(epochs)
-    for i,w in enumerate(w_history):
-        norm_hist[i] = np.linalg.norm(w)
-
-    plt.figure(figsize=(6,4))
-    plt.plot(tspan, norm_hist)
-    plt.title("Norm of W over time")
-    
-    plt.show()
+def save_weights(weights, rule):
+    path = "outputs/"+rule+"/weights.npz"
+    np.savez(path, *weights)

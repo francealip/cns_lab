@@ -76,3 +76,9 @@ poetry.lock
 
 # csv files
 *.csv
+
+#npz files
+*.npz
+
+#DS_Store
+*.DS_Store
