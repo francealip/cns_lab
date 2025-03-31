@@ -69,12 +69,12 @@ def firing_rate_model(rule, u, n_epochs, lr, delta, alpha=0, theta=0, seed=42):
         
         w_old = w
         history.append(w.copy())
-        if epoch % 100 == 0:
-            print(f"Running epoch ", epoch)
+        #if epoch % 100 == 0:
+        #    print(f"Running epoch ", epoch)
 
     return w, np.array(history), convergence
 
-def plot_1(u, w, p_evec,rule):
+def plot_1(u, w, p_evec, rule, dataset):
     """
     plot number 1: plots input data u, weight vector w and principal eigenvector p_evec
         
@@ -83,7 +83,7 @@ def plot_1(u, w, p_evec,rule):
     :param p_evec: principal eigenvector
     :param rule: update rule used
     """
-    filepath = "outputs/"+rule+"/"
+    filepath = "outputs/"+dataset+"/"+rule+"/"
     if not os.path.exists(filepath):
         os.makedirs(filepath)
     filepath += "plot_1.png"
@@ -93,8 +93,14 @@ def plot_1(u, w, p_evec,rule):
     plt.xlabel("u[0]")
     plt.ylabel("u[1]")
     plt.title(rule.replace('_', ' ') + " weights and principal eigenvector plot")
-    ax.quiver(0, 0, w[0], w[1], color="green", width=0.002, label="Weight vector (w)")
-    ax.quiver(0, 0, p_evec[0], p_evec[1], color="red", width=0.002, label="Principal eigenvector")
+    
+    if dataset == "dataset_2":
+        ax.quiver(0.1, 0.2, w[0], w[1], color="green", width=0.003, label="Weight vector (w)")
+        ax.quiver(0.1, 0.2, p_evec[0], p_evec[1], color="red", width=0.003, label="Principal eigenvector")
+    else:
+        ax.quiver(0, 0, w[0], w[1], color="green", width=0.002, label="Weight vector (w)")
+        ax.quiver(0, 0, p_evec[0], p_evec[1], color="red", width=0.002, label="Principal eigenvector")
+    
     ax.legend()
     
     if os.path.isfile(filepath):
@@ -103,7 +109,7 @@ def plot_1(u, w, p_evec,rule):
 
     plt.show()
     
-def plot_2(tspan, w_history, rule):
+def plot_2(tspan, w_history, rule, dataset):
     """
     plot number 2: plots the evolution of the weight vector w through epochs
     
@@ -111,7 +117,7 @@ def plot_2(tspan, w_history, rule):
     :param tspan: time span
     :param rule: update rule used
     """
-    filepath = "outputs/"+rule+"/"
+    filepath = "outputs/"+dataset+"/"+rule+"/"
     if not os.path.exists(filepath):
         os.makedirs(filepath)
     filepath += "plot_2.png"
@@ -148,6 +154,9 @@ def plot_2(tspan, w_history, rule):
     plt.savefig(filepath)
     plt.show()
 
-def save_weights(weights, rule):
-    path = "outputs/"+rule+"/weights.npz"
-    np.savez(path, *weights)
+def save_weights(weights, rule, dataset):
+    filepath = "outputs/"+dataset+"/"+rule+"/"
+    if not os.path.exists(filepath):
+        os.makedirs(filepath)
+    filepath += "weights.npz"
+    np.savez(filepath, *weights)
