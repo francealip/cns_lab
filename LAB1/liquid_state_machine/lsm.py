@@ -113,7 +113,7 @@ class LSM:
         re = np.random.rand(self.Ne)
         ri = np.random.rand(self.Ni)
         
-        a = np.concatenate((0.02*np.ones(self.Ne), 0.02+0.08*ri))
+        a = np.concatenate((0.015*np.ones(self.Ne), 0.015+0.08*ri)) #provare 0.1 e 0.001
         b = np.concatenate((0.2*np.ones(self.Ne), 0.25-0.05*ri))
         
         
