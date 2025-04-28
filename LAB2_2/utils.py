@@ -3,17 +3,20 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import glob
 
 
 def read_data(path):
-    X = torch.empty(3, 1024)
+    csv_files = glob.glob(path + "*.csv")
+    num_patterns = len(csv_files)
+    file_csv = sorted([f for f in os.listdir(path) if f.endswith('.csv')])
+    X = torch.empty(num_patterns, 1024)
 
-    for i,file in enumerate(os.listdir(path)):
+    for i,file in enumerate(file_csv):
         if file.lower().endswith(".csv"):
             df = pd.read_csv(path+ file, dtype=float, header=None)
             x = torch.tensor(df.values).reshape(1, 1024)
-            print(x.shape)
-            X[i-1] = x      # because of a DS_store file inside
+            X[i] = x      # because of a DS_store file inside
             
     return X
 
@@ -30,6 +33,7 @@ def distortion(p, d):
     n = p.size(0)
     k = int(n * d)       #proportion of values to be permutated
     
+    torch.manual_seed(42)
     sample = torch.randperm(n)[:k].unsqueeze(0) 
     mask = torch.ones(1, n, dtype=torch.float).scatter_(1, sample, -1)
         

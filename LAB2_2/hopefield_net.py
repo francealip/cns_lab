@@ -44,6 +44,18 @@ class HopfieldNet:
         :param x: tensor of shape (1, N) - the current state
         """
         return -0.5 * (x @ self.W @ x.t()).item()
+    
+    def incremental_learn(self, pattern):
+        """
+        Learn how to recall the added pattern, updating the network weights
+        
+        :param pattern: a sized (1,N) torch tensor to be memorized in our weights    
+        """
+        self.input_patterns = torch.cat((self.input_patterns, pattern), dim=0)
+        self.num_patterns += 1
+        pattern = pattern.view(-1)
+        self.W += (torch.outer(pattern, pattern)) / self.size
+        self.W.fill_diagonal_(0)  
         
 
 
