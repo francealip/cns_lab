@@ -1,10 +1,11 @@
-# Models implementation for Sequ-to-Seq regression
+# Model implementation for Sequ-to-Seq regression
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 import torch.optim as optim
-
+from learning import EarlyStopping 
+        
 class TimeDelayNN(nn.Module):
     def __init__(self,
                  in_dim = 1, 
@@ -78,16 +79,26 @@ class TimeDelayNN(nn.Module):
         x = self.fc2(x)
         return x        
     
-    def get_optimizer(self, lr):
+    def get_optimizer(self, lr, weight_decay):
         """
         Get the optimizer for the model.
         
         :return: Optimizer.
         """
         optimizer_class = getattr(optim, self.optimizer)
-        return optimizer_class(self.parameters(), lr=lr)
+        return optimizer_class(self.parameters(), lr=lr, weight_decay=weight_decay)
         
-    def fit(self, x_train, y_train, x_val, y_val, epochs=10, lr=0.001, verbose=False):
+    def fit(self, 
+            x_train, 
+            y_train, 
+            x_val, 
+            y_val, 
+            epochs=10, 
+            lr=0.001, 
+            weight_decay=1e-3, 
+            patience=150,
+            delta=1e-20,
+            verbose=False):
         """
         Fit the model to the data.
         
@@ -97,11 +108,13 @@ class TimeDelayNN(nn.Module):
         :param y_val: Validation labels.
         :param epochs: Number of epochs to train.
         :param lr: Learning rate.
+        
         :return: Training and validation loss history.
         """
         train_history, val_history = [], []
-        optimizer = self.get_optimizer(lr)
+        optimizer = self.get_optimizer(lr, weight_decay)
         loss_fn = nn.MSELoss()
+        early_stopping = EarlyStopping(patience=patience, delta=delta)
         
         self.train()
         for epoch in range(epochs):
@@ -122,8 +135,14 @@ class TimeDelayNN(nn.Module):
         
                 val_history.append(loss.item())
             
-            if verbose and (epoch+1)%10 == 0:
+            if verbose and (epoch+1)%50 == 0:
                 print(f"Epoch {epoch+1}/{epochs}, Train Loss: {train_history[-1]}, Val Loss: {val_history[-1]}")
+            
+            if early_stopping(val_history[-1], self):
+                if verbose:
+                    print(f"Early stopping at epoch {epoch+1}")
+                self = early_stopping.get_best_model()
+                break
             
         return train_history, val_history
         
