@@ -20,6 +20,7 @@ def plot_time_series(time, data, title, xlabel, ylabel, limit=200):
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
+    plt.grid(True)
     plt.show()
    
     
@@ -36,19 +37,11 @@ def split_data(X, Y, train_size, val_size):
     """
     x_train, x_val, x_test = X[:train_size], X[train_size:train_size + val_size], X[train_size + val_size:]
     y_train, y_val, y_test = Y[:train_size], Y[train_size:train_size + val_size], Y[train_size + val_size:]
-
-    x_train = x_train.reshape(1, 1, -1).float()
-    x_val = x_val.reshape(1, 1, -1).float()
-    x_test = x_test.reshape(1, 1, -1).float()
-
-    y_train = y_train.reshape(1, -1, 1).float()
-    y_val = y_val.reshape(1, -1, 1).float()
-    y_test = y_test.reshape(1, -1, 1).float()
     
     return x_train, x_val, x_test, y_train, y_val, y_test
 
 
-def import_parameters(yaml2, yaml4):
+def import_parameters(yaml2, yaml4="tdnn4.yaml"):
     """
     Import parameters from YAML configuration files for 2 layer and 4 layer TDNN.
     

@@ -1,10 +1,10 @@
-# Model implementation for Sequ-to-Seq regression
+# Model implementation for Seq-to-Seq regression
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 import torch.optim as optim
-from learning import EarlyStopping 
+from earlyStopping import EarlyStopping 
         
 class TimeDelayNN(nn.Module):
     def __init__(self,
@@ -108,6 +108,10 @@ class TimeDelayNN(nn.Module):
         :param y_val: Validation labels.
         :param epochs: Number of epochs to train.
         :param lr: Learning rate.
+        :param weight_decay: Weight decay for the optimizer.
+        :param patience: Patience for early stopping.
+        :param delta: Minimum change to qualify as an improvement.
+        :param verbose: If True, print training progress.
         
         :return: Training and validation loss history.
         """
@@ -116,9 +120,9 @@ class TimeDelayNN(nn.Module):
         loss_fn = nn.MSELoss()
         early_stopping = EarlyStopping(patience=patience, delta=delta)
         
-        self.train()
         for epoch in range(epochs):
             # make one step over the training set
+            self.train()
             optimizer.zero_grad()
             y_pred = self(x_train)
             loss = loss_fn(y_pred, y_train)
@@ -130,7 +134,7 @@ class TimeDelayNN(nn.Module):
             # Validate the model
             self.eval()
             with torch.no_grad():
-                y_pred = self(x_val)
+                y_pred = self.forward(x_val)
                 loss = loss_fn(y_pred, y_val)
         
                 val_history.append(loss.item())
