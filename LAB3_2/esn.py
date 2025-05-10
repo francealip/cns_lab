@@ -3,7 +3,18 @@
 import torch
 
 class Esn():
-    def __init__(self, in_dim, out_dim, hidden_dim, rho, omega_in, omega_bias, scaling_type, washout):
+    def __init__(
+        self, 
+        in_dim, 
+        out_dim, 
+        hidden_dim, 
+        rho, 
+        keep_prob, 
+        alpha,
+        omega_in, 
+        omega_bias, 
+        scaling_type, 
+        washout):
         """
         ESN class implementation for a seq-to-seq regression task
         
@@ -11,6 +22,8 @@ class Esn():
         :param out_dim: output feature size
         :param hidden_dim: hidden neuron size
         :param rho: expected spectral radius for hidden-to-hidden weight matrix
+        :param keep_prob: probability of keeping a weight in the hidden-to-hidden matrix
+        _param alpha: leaky rate for the reservoir
         :param omega_in: input-to-hidden matrix rescaling parameter 
         :param omega_bias: bias rescaling  parameter
         :param scaling_type: input and bias scaling type
@@ -21,10 +34,13 @@ class Esn():
         self.out_dim = out_dim
         self.hidden_dim = hidden_dim 
         self.washout = washout
+        self.alpha = alpha
         self.Win = self.init_input_matrix(omega_in, scaling_type)
-        self.Wh = self.init_hidden_matrix(rho)
+        self.Wh = self.init_hidden_matrix(rho, keep_prob)
         self.bh = self.init_hiddden_bias(omega_bias, scaling_type)
-        self.Wout = torch.FloatTensor(self.hidden_dim + 1, self.out_dim).uniform_(-1, 1)  # +1 to include bias
+        Wout = torch.FloatTensor(self.hidden_dim, self.out_dim).uniform_(-1, 1)  # +1 to include bias
+        self.bout = torch.full((1, self.out_dim), torch.randn(1).item())            # Bias for output layer
+        self.Wout = torch.cat([Wout, self.bout], dim=0)  # Concatenate Wout and bout to form the output layer
         
     def init_input_matrix(self, omega_in, scaling_type):
         """
@@ -44,17 +60,22 @@ class Esn():
         
         return Win
     
-    def init_hidden_matrix(self, rho):
+    def init_hidden_matrix(self, rho, keep_prob):
         """
         Initialize input to hidden matrix Win
         
         :param rho: desired spectral radius
+        :param keep_prob: probability of keeping a weight in the hidden-to-hidden matrix
         :return: hidden weight matrix
         """
         Wh = torch.FloatTensor(self.hidden_dim, self.hidden_dim).uniform_(-1, 1)
         eigenvalues = torch.linalg.eigvals(Wh).abs()
         spectral_radius = torch.max(eigenvalues)
         Wh = Wh * (rho / spectral_radius)
+        
+        # sparsify the matrix
+        mask = torch.bernoulli(torch.full_like(Wh, keep_prob))
+        Wh = Wh * mask
         
         return Wh
         
@@ -85,17 +106,18 @@ class Esn():
         :param x: input sequence tensor (seq_length x feature_size)
         :return: hidden activation tensor (seq_length x hidden_size)
         """
+        
         seq_len = x.size(0)
-        ht_minus_1 = torch.zeros(self.hidden_dim)
+        ht = torch.zeros(self.hidden_dim)
         h = []
         
-        for t in range(seq_len):
-            ht = torch.tanh((self.Wh @ ht_minus_1) + (self.Win @ x[t]) + self.bh)
-            h.append(ht)
-            ht_minus_1 = ht 
-        h = torch.stack(h).reshape(seq_len, -1)
+        with torch.no_grad():
+            for t in range(seq_len):
+                ht = (1 - self.alpha) * ht + self.alpha * (torch.tanh((self.Wh @ ht) + (self.Win @ x[t]) + self.bh))
+                h.append(ht)
+            h = torch.stack(h).reshape(seq_len, -1)
         
-        return h[self.washout:]
+        return h
             
     def readout(self, h):
         """
@@ -109,13 +131,39 @@ class Esn():
         y = h @ self.Wout
         return y
     
+    def forward(self, x):
+        """
+        Compute the forward pass
+        
+        :param x: input sequence tensor (seq_length x feature_size)
+        :return: output sequence (seq_length x out_dim)
+        """
+        h = self.compute_reservoir(x)  
+        y = self.readout(h)
+        
+        return y
+    
     def fit(self, x_train, y_train, lambd):
         h = self.compute_reservoir(x_train)  
+        
+        # Washout if needed
+        h = h[self.washout:]
+        x_train = x_train[self.washout:]
+        y_train = y_train[self.washout:]
         
         # Add bias term
         ones = torch.ones(h.shape[0], 1)
         h = torch.cat([h, ones], dim=1) 
 
-        Ht = h.T
-        I = torch.eye(Ht.shape[0])
-        self.Wout = torch.linalg.solve(Ht @ h + lambd * I, Ht @ y_train)
+        I = torch.eye(h.shape[1])
+        self.Wout = torch.inverse(h.T @ h + lambd * I) @ h.T @ y_train
+        
+    def loss(self, y_pred, y_true):
+        """
+        Compute the loss function
+        
+        :param y_pred: predicted output
+        :param y_true: true output
+        :return: MSE loss value
+        """
+        return torch.nn.functional.mse_loss(y_pred, y_true)

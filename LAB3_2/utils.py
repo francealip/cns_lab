@@ -41,42 +41,19 @@ def split_data(X, Y, train_size, val_size):
     return x_train, x_val, x_test, y_train, y_val, y_test
 
 
-def import_parameters(yaml2, yaml4="tdnn4.yaml"):
+def import_parameters(file):
     """
     Import parameters from YAML configuration files for 2 layer and 4 layer TDNN.
     
-    :param yaml2: Path to the YAML file for 2 layer TDNN.
-    :param yaml4: Path to the YAML file for 4 layer TDNN.
+    :param file: Path to the YAML file for ESN.
     
     :return: Tuple of configurations for 2 layer and 4 layer TDNN.
     """
     # Load the YAML configuration files for 2 layer and 4 layer TDNN
-    with open('grid_param/'+yaml2, 'r') as f:
-        config1 = yaml.safe_load(f)
-
-    with open('grid_param/'+yaml4, 'r') as f:
-        config2 = yaml.safe_load(f)
+    with open('grid_param/'+file, 'r') as f:
+        config = yaml.safe_load(f)
         
-    return config1, config2
-
-
-def plot_histories(t_history, v_history, val_set="Validation"):
-    """
-    Plot the training and validation loss histories.
-    
-    :param t_history: Training loss history.
-    :param v_history: Validation loss history.
-    :param val_set: Name of the validation set, default "Validation".
-    """
-    plt.figure(figsize=(10, 5))
-    plt.plot(t_history, label='Training History')
-    plt.plot(v_history, label=val_set + ' History')
-    plt.title('Training and ' + val_set +' MSE Histories')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+    return config
     
     
 def plot_predictions(y_true, y_pred, title="Predicted vs True Values", num_instances=250):
@@ -89,4 +66,3 @@ def plot_predictions(y_true, y_pred, title="Predicted vs True Values", num_insta
     plt.legend()
     plt.grid(True)
     plt.show()
-
