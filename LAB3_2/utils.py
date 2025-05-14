@@ -56,10 +56,10 @@ def import_parameters(file):
     return config
     
     
-def plot_predictions(y_true, y_pred, title="Predicted vs True Values", num_instances=250):
+def plot_predictions(y_true, y_pred, title="Predicted vs True Values", start = 100, end=250):
     plt.figure(figsize=(20, 5))
-    plt.plot(y_true.flatten().detach().numpy()[:num_instances], label="True Values", alpha=0.7)
-    plt.plot(y_pred.flatten().detach().numpy()[:num_instances], label="Predicted Values", alpha=0.7, linestyle=':')
+    plt.plot(y_true.flatten().detach().numpy()[start:end], label="True Values", alpha=0.7)
+    plt.plot(y_pred.flatten().detach().numpy()[start:end], label="Predicted Values", alpha=0.7, linestyle=':')
     plt.title(title)
     plt.xlabel("Index")
     plt.ylabel("Value")

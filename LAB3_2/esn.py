@@ -38,7 +38,7 @@ class Esn():
         self.Win = self.init_input_matrix(omega_in, scaling_type)
         self.Wh = self.init_hidden_matrix(rho, keep_prob)
         self.bh = self.init_hiddden_bias(omega_bias, scaling_type)
-        Wout = torch.FloatTensor(self.hidden_dim, self.out_dim).uniform_(-1, 1)  # +1 to include bias
+        Wout = torch.FloatTensor(self.hidden_dim, self.out_dim).uniform_(-1, 1)  
         self.bout = torch.full((1, self.out_dim), torch.randn(1).item())            # Bias for output layer
         self.Wout = torch.cat([Wout, self.bout], dim=0)  # Concatenate Wout and bout to form the output layer
         
@@ -69,13 +69,16 @@ class Esn():
         :return: hidden weight matrix
         """
         Wh = torch.FloatTensor(self.hidden_dim, self.hidden_dim).uniform_(-1, 1)
+        # sparsify the matrix
+        mask = torch.bernoulli(torch.full_like(Wh, keep_prob))
+        Wh = Wh * mask
+        
         eigenvalues = torch.linalg.eigvals(Wh).abs()
         spectral_radius = torch.max(eigenvalues)
         Wh = Wh * (rho / spectral_radius)
         
-        # sparsify the matrix
-        mask = torch.bernoulli(torch.full_like(Wh, keep_prob))
-        Wh = Wh * mask
+        Wh = (Wh - (1 - self.alpha) * torch.eye(self.hidden_dim)) / self.alpha
+
         
         return Wh
         
@@ -155,8 +158,11 @@ class Esn():
         ones = torch.ones(h.shape[0], 1)
         h = torch.cat([h, ones], dim=1) 
 
-        I = torch.eye(h.shape[1])
-        self.Wout = torch.inverse(h.T @ h + lambd * I) @ h.T @ y_train
+        if lambd == 0:
+            self.Wout = torch.linalg.pinv(h) @ y_train
+        else:
+            I = torch.eye(h.shape[1])
+            self.Wout = torch.linalg.pinv(h.T @ h + lambd * I) @ h.T @ y_train
         
     def loss(self, y_pred, y_true):
         """
