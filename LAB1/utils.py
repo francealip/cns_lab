@@ -193,4 +193,11 @@ def plot_extra(pot, rec, tspan, in_plot, offset, title):
     axes[1].plot(pot, rec)
 
     plt.tight_layout()  
+    
+    filepath = "plots/bonus_track/" + title.replace("-","").replace(" ","_")
+    if os.path.isfile(filepath):
+        os.remove(filepath)
+    plt.savefig(filepath)
+    
+    
     plt.show()
