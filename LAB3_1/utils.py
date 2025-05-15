@@ -60,7 +60,7 @@ def import_parameters(yaml2, yaml4="tdnn4.yaml"):
     return config1, config2
 
 
-def plot_histories(t_history, v_history, val_set="Validation"):
+def plot_histories(model, t_history, v_history, val_set="Validation"):
     """
     Plot the training and validation loss histories.
     
@@ -76,10 +76,14 @@ def plot_histories(t_history, v_history, val_set="Validation"):
     plt.ylabel('Loss')
     plt.legend()
     plt.grid(True)
+    plt.savefig(f'results/{model}/training_{val_set}_history.png')
     plt.show()
     
     
-def plot_predictions(y_true, y_pred, title="Predicted vs True Values", num_instances=250):
+def plot_predictions(y_true, y_pred, title="Predicted vs True Values", num_instances=250, model="tdnn"):
+    """
+    Plot the predicted values against the true values over time.
+    """
     plt.figure(figsize=(20, 5))
     plt.plot(y_true.flatten().detach().numpy()[:num_instances], label="True Values", alpha=0.7)
     plt.plot(y_pred.flatten().detach().numpy()[:num_instances], label="Predicted Values", alpha=0.7, linestyle=':')
@@ -88,5 +92,7 @@ def plot_predictions(y_true, y_pred, title="Predicted vs True Values", num_insta
     plt.ylabel("Value")
     plt.legend()
     plt.grid(True)
+    set = title.split(" ")[0].lower()
+    plt.savefig(f'results/{model}/{set}_set_predictions_over_time.png')
     plt.show()
 
