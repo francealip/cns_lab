@@ -40,7 +40,7 @@ def distortion(p, d):
     return p * mask
 
 
-def plot_images(original, noisy, reconstruction, noise):
+def plot_images(original, noisy, reconstruction, noise, folder):
     """
     Display side by side: original image, noisy image, and reconstructed image.
 
@@ -67,10 +67,11 @@ def plot_images(original, noisy, reconstruction, noise):
     axs[2].set_title('Reconstructed Image')
 
     plt.tight_layout()
+    plt.savefig(os.path.join(f'plots/{folder}/', f'reconstruction_{noise}_noise.png'))
     plt.show()
 
 
-def plot_energy_overlap(energy, overlap, noise):
+def plot_energy_overlap(energy, overlap, noise, folder):
     """
     Display side by side: energy  across iterations and overlap across iterations.
 
@@ -94,4 +95,5 @@ def plot_energy_overlap(energy, overlap, noise):
     axs[1].set_xlabel('Updates')
     
     plt.tight_layout()
+    plt.savefig(os.path.join(f'plots/{folder}/', f'energy_overlap_{noise}_noise.png'))
     plt.show()
