@@ -3,7 +3,6 @@ import numpy as np
 from joblib import Parallel, delayed
 from tqdm import tqdm
 from esn import Esn
-import torch
 
 def esn_single_experiment(n_iter, i, config, x_train, y_train, x_val, y_val, seed=42):
     """
@@ -32,8 +31,6 @@ def esn_single_experiment(n_iter, i, config, x_train, y_train, x_val, y_val, see
             out_dim=y_train.shape[1],
             hidden_dim=params['hidden_dim'],
             rho=params['rho'],
-            keep_prob=params['keep_prob'],
-            alpha=params['alpha'],
             omega_in=params['omega_in'],
             omega_bias=params['omega_bias'],
             scaling_type=params['scaling_type'],

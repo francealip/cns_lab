@@ -65,4 +65,8 @@ def plot_predictions(y_true, y_pred, title="Predicted vs True Values", start = 1
     plt.ylabel("Value")
     plt.legend()
     plt.grid(True)
+    
+    name = title.split(" ")[0].lower() + "_plot"
+    plt.savefig("results/"+name + ".png")
+    
     plt.show()

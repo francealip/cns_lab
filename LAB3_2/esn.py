@@ -9,8 +9,6 @@ class Esn():
         out_dim, 
         hidden_dim, 
         rho, 
-        keep_prob, 
-        alpha,
         omega_in, 
         omega_bias, 
         scaling_type, 
@@ -22,8 +20,6 @@ class Esn():
         :param out_dim: output feature size
         :param hidden_dim: hidden neuron size
         :param rho: expected spectral radius for hidden-to-hidden weight matrix
-        :param keep_prob: probability of keeping a weight in the hidden-to-hidden matrix
-        _param alpha: leaky rate for the reservoir
         :param omega_in: input-to-hidden matrix rescaling parameter 
         :param omega_bias: bias rescaling  parameter
         :param scaling_type: input and bias scaling type
@@ -34,13 +30,25 @@ class Esn():
         self.out_dim = out_dim
         self.hidden_dim = hidden_dim 
         self.washout = washout
-        self.alpha = alpha
         self.Win = self.init_input_matrix(omega_in, scaling_type)
-        self.Wh = self.init_hidden_matrix(rho, keep_prob)
+        self.Wh = self.init_hidden_matrix(rho)
         self.bh = self.init_hiddden_bias(omega_bias, scaling_type)
         Wout = torch.FloatTensor(self.hidden_dim, self.out_dim).uniform_(-1, 1)  
         self.bout = torch.full((1, self.out_dim), torch.randn(1).item())            # Bias for output layer
         self.Wout = torch.cat([Wout, self.bout], dim=0)  # Concatenate Wout and bout to form the output layer
+    
+    def get_parameters(self):
+        """
+        Get the parameters of the ESN model
+        
+        :return: dictionary of model parameters
+        """
+        return {
+            'Win_T': self.Win.T,
+            'Wh': self.Wh,
+            'bh_T': self.bh.T,
+            'Wout_T': self.Wout.T,
+        }   
         
     def init_input_matrix(self, omega_in, scaling_type):
         """
@@ -54,38 +62,31 @@ class Esn():
         if scaling_type == 'range':
           Win = Win * omega_in
         if scaling_type == 'norm':
-            Win = Win * (Win/torch.norm(Win))  
+            Win = Win * (omega_in/torch.norm(Win))  
         else:
             raise ValueError(f"Unknown dataset: {scaling_type}")
         
         return Win
     
-    def init_hidden_matrix(self, rho, keep_prob):
+    def init_hidden_matrix(self, rho):
         """
-        Initialize input to hidden matrix Win
+        Initialize hidden to hidden matrix Wh
         
         :param rho: desired spectral radius
-        :param keep_prob: probability of keeping a weight in the hidden-to-hidden matrix
         :return: hidden weight matrix
         """
         Wh = torch.FloatTensor(self.hidden_dim, self.hidden_dim).uniform_(-1, 1)
-        # sparsify the matrix
-        mask = torch.bernoulli(torch.full_like(Wh, keep_prob))
-        Wh = Wh * mask
         
         eigenvalues = torch.linalg.eigvals(Wh).abs()
         spectral_radius = torch.max(eigenvalues)
         Wh = Wh * (rho / spectral_radius)
-        
-        Wh = (Wh - (1 - self.alpha) * torch.eye(self.hidden_dim)) / self.alpha
-
         
         return Wh
         
 
     def init_hiddden_bias(self, omega_bias, scaling_type):
         """
-        Initialize bias term
+        Initialize bias term for the hidden layer
         
         :omega_bias: bias rescaling  parameter
         :param scaling_type: input and bias scaling type
@@ -116,7 +117,7 @@ class Esn():
         
         with torch.no_grad():
             for t in range(seq_len):
-                ht = (1 - self.alpha) * ht + self.alpha * (torch.tanh((self.Wh @ ht) + (self.Win @ x[t]) + self.bh))
+                ht = torch.tanh((self.Wh @ ht) + (self.Win @ x[t]) + self.bh)
                 h.append(ht)
             h = torch.stack(h).reshape(seq_len, -1)
         
@@ -124,11 +125,12 @@ class Esn():
             
     def readout(self, h):
         """
-        Compute the redout
+        Compute the output of the ESN model applying the readout layer
         
-        :param h: hidden activation tensor (seq_len x hidden size)
-        :return: output sequence (seq_len x out_dim)
+        :param h: hidden activation tensor (seq_length x hidden_size)
+        :return: output tensor (seq_length x out_dim)
         """
+
         ones = torch.ones(h.shape[0], 1) 
         h = torch.cat([h, ones], dim=1) 
         y = h @ self.Wout
@@ -141,19 +143,28 @@ class Esn():
         :param x: input sequence tensor (seq_length x feature_size)
         :return: output sequence (seq_length x out_dim)
         """
-        h = self.compute_reservoir(x)  
+        h = self.compute_reservoir(x) 
         y = self.readout(h)
         
         return y
     
     def fit(self, x_train, y_train, lambd):
+        """
+        Fite the ESN model to the training data with direct approach
+        
+        :param x_train: training input sequence tensor (seq_length x feature_size)
+        :param y_train: training output sequence tensor (seq_length x out_dim)
+        :param lambd: regularization parameter
+        """
         h = self.compute_reservoir(x_train)  
         
         # Washout if needed
         h = h[self.washout:]
         x_train = x_train[self.washout:]
         y_train = y_train[self.washout:]
-        
+    
+              
+    
         # Add bias term
         ones = torch.ones(h.shape[0], 1)
         h = torch.cat([h, ones], dim=1) 
